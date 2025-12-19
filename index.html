@@ -3,445 +3,660 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Concrete World (Ayaan Hardware) - Premium Building Materials | Aminagad</title>
-    <meta name="description" content="Professional building materials supplier in Aminagad. Quality paints, electrical, plumbing & hardware from trusted brands. 5 years of reliable service since 2020.">
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Concrete World - Premium Building Materials</title>
+    
+    <!-- 1. The Engine -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 2. Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+    <!-- 3. Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #F8F9FA; color: #11142D; margin: 0; }
+        
+        /* Glassmorphism & Animations */
+        .glass-nav { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(108, 93, 211, 0.1); }
+        .animate-float-up { animation: floatUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes floatUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom UI Elements */
+        .trantor-card { background: white; border-radius: 2rem; box-shadow: 0 10px 40px -10px rgba(0,0,0,0.05); }
+        .trantor-input { background: #F4F5F6; border: 2px solid transparent; border-radius: 1.25rem; transition: all 0.2s; }
+        .trantor-input:focus { background: #fff; border-color: #B5E4CA; outline: none; box-shadow: 0 0 0 4px rgba(181, 228, 202, 0.2); }
+        .dropify-card { background: white; border-radius: 1.5rem; box-shadow: 0 4px 24px rgba(0,0,0,0.03); }
+        .dropify-purple-card { background: #6C5DD3; color: white; border-radius: 1.5rem; position: relative; overflow: hidden; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Vibrant Gradient Text */
+        .text-gradient {
+            background: linear-gradient(135deg, #6C5DD3 0%, #B5E4CA 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
 </head>
 <body>
-    <!-- Professional Header -->
-    <header class="header" id="header">
-        <div class="container">
-            <div class="header-content">
-                <div class="logo">
-                    <div class="logo-text">
-                        <h1>Concrete World (Ayaan Hardware)</h1>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
+
+        // =========================================================================
+        // 🔴 STEP 1: FIREBASE KEYS
+        // =========================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWd1uN74HFElE2LgYWtLIoy-22FVXBNI0",
+            authDomain: "concreteworld-rewards.firebaseapp.com",
+            projectId: "concreteworld-rewards",
+            storageBucket: "concreteworld-rewards.firebasestorage.app",
+            messagingSenderId: "88740844050",
+            appId: "1:88740844050:web:f5f0fe9a774995cb0a3ecb"
+        };
+        // =========================================================================
+
+        let db = null;
+        let auth = null;
+        let firebaseReady = false;
+
+        try {
+            if (firebaseConfig.apiKey) {
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                auth = firebase.auth();
+                firebaseReady = true;
+            }
+        } catch (e) { console.error("Firebase Init Failed:", e); }
+
+        const Icon = ({ path, className }) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} dangerouslySetInnerHTML={{ __html: path }} />;
+        const Icons = {
+            Menu: (p) => <Icon {...p} path='<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>' />,
+            X: (p) => <Icon {...p} path='<path d="M18 6 6 18"/><path d="m6 6 12 12"/>' />,
+            Star: (p) => <Icon {...p} path='<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>' />,
+            QrCode: (p) => <Icon {...p} path='<rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/>' />,
+            User: (p) => <Icon {...p} path='<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' />,
+            Users: (p) => <Icon {...p} path='<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>' />,
+            LayoutDashboard: (p) => <Icon {...p} path='<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>' />,
+            BarChart3: (p) => <Icon {...p} path='<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>' />,
+            CheckCircle: (p) => <Icon {...p} path='<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>' />,
+            XCircle: (p) => <Icon {...p} path='<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>' />,
+            UserPlus: (p) => <Icon {...p} path='<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>' />,
+            Building2: (p) => <Icon {...p} path='<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>' />,
+            PaintBucket: (p) => <Icon {...p} path='<path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/>' />,
+            AlertCircle: (p) => <Icon {...p} path='<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>' />,
+            Search: (p) => <Icon {...p} path='<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>' />,
+            MapPin: (p) => <Icon {...p} path='<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>' />,
+            LogOut: (p) => <Icon {...p} path='<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>' />,
+            Crown: (p) => <Icon {...p} path='<path d="m2 4 3 12h14l3-12-6 7-4-9-4 9-6-7z"/>' />,
+            Wallet: (p) => <Icon {...p} path='<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>' />,
+            TrendingUp: (p) => <Icon {...p} path='<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>' />,
+            Mail: (p) => <Icon {...p} path='<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>' />,
+            Truck: (p) => <Icon {...p} path='<path d="M5 18H3c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1h10c.6 0 1 .4 1 1v11"/><path d="M14 9h4l4 4v4c0 .6-.4 1-1 1h-2"/><circle cx="7" cy="18" r="2"/><path d="M15 18H9"/><circle cx="17" cy="18" r="2"/>' />,
+            Package: (p) => <Icon {...p} path='<path d="m16.5 9.4-9-5.19"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/>' />,
+            Hammer: (p) => <Icon {...p} path='<path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25V7.86c0-.55-.45-1-1-1H14.14c-.83 0-1.64.32-2.25.94l-1.25 1.25c-1.22 1.22-3.2 1.22-4.42 0l-1.59-1.59c-1.21-1.21-1.21-3.19 0-4.41l1.6-1.6a2.12 2.12 0 0 1 3 0l8.69 8.69c.83.83.83 2.17 0 3 0 0 0 0 0 0Z"/>' />,
+            HardHat: (p) => <Icon {...p} path='<path d="M2 18a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v2z"/><path d="M10 10V5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5"/><path d="M4 15v-3a6 6 0 0 1 6-6h0"/><path d="M14 6h0a6 6 0 0 1 6 6v3"/>' />,
+            ArrowUpRight: (p) => <Icon {...p} path='<line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/>' />,
+            ChevronDown: (p) => <Icon {...p} path='<path d="m6 9 6 6 6-6"/>' />,
+            ChevronRight: (p) => <Icon {...p} path='<path d="m9 18 6-6-6-6"/>' />,
+            ChevronUp: (p) => <Icon {...p} path='<path d="m18 15-6-6-6 6"/>' />,
+            BadgeCheck: (p) => <Icon {...p} path='<path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.78 4.78 4 4 0 0 1-6.74 0 4 4 0 0 1-4.78-4.77 2 2 0 0 1 0-2.36"/><path d="m9 12 2 2 4-4"/>' />,
+            Plus: (p) => <Icon {...p} path='<path d="M5 12h14"/><path d="M12 5v14"/>' />,
+            Download: (p) => <Icon {...p} path='<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>' />,
+            Quote: (p) => <Icon {...p} path='<path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>' />,
+            Phone: (p) => <Icon {...p} path='<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>' />
+        };
+        
+        const appId = 'default-app-id';
+
+        // --- APP CONTROLLER ---
+        function App() {
+            const [view, setView] = useState('landing');
+            const [user, setUser] = useState(null);
+            
+            useEffect(() => {
+                if(view === 'app' && firebaseReady && auth) {
+                    auth.signInAnonymously().then(u => setUser(u.user)).catch(console.error);
+                }
+            }, [view]);
+
+            if (!firebaseReady && view === 'app') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-gray-50 text-center p-6">
+                        <div className="bg-white p-10 rounded-3xl shadow-xl max-w-lg">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.AlertCircle className="w-8 h-8 text-red-500" /></div>
+                            <h2 className="text-2xl font-black mb-2 text-gray-900">Setup Required</h2>
+                            <p className="text-gray-500 mb-6">Database keys are missing. Open this file and paste Firebase config in line 38.</p>
+                            <button onClick={()=>setView('landing')} className="bg-black text-white px-6 py-3 rounded-xl font-bold">Back to Home</button>
+                        </div>
                     </div>
+                );
+            }
+
+            return view === 'landing' ? <LandingPage onLaunch={() => setView('app')} /> : <StarRewardsApp user={user} onBack={() => setView('landing')} />;
+        }
+
+        // --- LANDING PAGE ---
+        function LandingPage({ onLaunch }) {
+            const [menu, setMenu] = useState(false);
+            return (
+                <div className="bg-white text-[#1A1D1F] min-h-screen font-sans">
+                    {/* Header */}
+                    <header className="fixed w-full z-50 glass-nav shadow-sm transition-all duration-300">
+                        <div className="max-w-7xl mx-auto px-4 h-20 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-gradient-to-br from-[#6C5DD3] to-[#5a4db0] p-2.5 rounded-xl shadow-lg shadow-indigo-200"><Icons.Building2 className="w-6 h-6 text-white"/></div>
+                                <div><h1 className="text-lg font-black uppercase leading-none tracking-tight">Concrete World</h1><p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Ayaan Hardware</p></div>
+                            </div>
+                            <nav className="hidden md:flex gap-8 font-bold text-sm text-gray-500">
+                                <a href="#home" className="hover:text-[#6C5DD3] transition-colors">Home</a>
+                                <a href="#products" className="hover:text-[#6C5DD3] transition-colors">Products</a>
+                                <a href="#brands" className="hover:text-[#6C5DD3] transition-colors">Brands</a>
+                                <a href="#about" className="hover:text-[#6C5DD3] transition-colors">About</a>
+                                <a href="#contact" className="hover:text-[#6C5DD3] transition-colors">Contact</a>
+                            </nav>
+                            <div className="flex gap-4">
+                                <button onClick={onLaunch} className="bg-[#6C5DD3] text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg hover:bg-[#5a4db0] transition-transform active:scale-95">
+                                    <Icons.Star className="w-4 h-4 fill-current text-[#B5E4CA]"/> Partner Portal
+                                </button>
+                                <button className="md:hidden" onClick={()=>setMenu(!menu)}><Icons.Menu/></button>
+                            </div>
+                        </div>
+                        {menu && <div className="md:hidden bg-white p-4 border-t shadow-xl absolute w-full"><a href="#home" className="block p-3 font-bold hover:bg-gray-50 rounded-lg">Home</a><a href="#products" className="block p-3 font-bold hover:bg-gray-50 rounded-lg">Products</a><a href="#brands" className="block p-3 font-bold hover:bg-gray-50 rounded-lg">Brands</a><a href="#about" className="block p-3 font-bold hover:bg-gray-50 rounded-lg">About</a><a href="#contact" className="block p-3 font-bold hover:bg-gray-50 rounded-lg">Contact</a><button onClick={onLaunch} className="w-full bg-[#6C5DD3] text-white py-3 rounded-xl font-bold mt-2">Partner Login</button></div>}
+                    </header>
+
+                    {/* Hero */}
+                    <section id="home" className="pt-32 pb-20 px-4 max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center relative overflow-hidden">
+                        <div className="space-y-8 animate-float-up relative z-10">
+                            <div className="inline-flex gap-2 bg-indigo-50 border border-indigo-100 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-[#6C5DD3] shadow-sm"><span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> Est 2020</div>
+                            <h1 className="text-5xl md:text-7xl font-black leading-[0.95] text-[#1A1D1F]">
+                                EVERYTHING <br/>
+                                <span className="text-gradient">YOUR BUILDING</span> <br/>
+                                NEEDS.
+                            </h1>
+                            <p className="text-lg text-gray-500 font-medium max-w-md leading-relaxed">Your trusted partner for Cement, Steel, Paints, and Hardware in Aminagad. Quality you can build on.</p>
+                            <div className="flex gap-4 pt-2">
+                                <a href="#products" className="px-8 py-4 bg-[#1A1D1F] text-white rounded-xl font-bold shadow-xl shadow-gray-200 hover:scale-105 transition-transform">Explore</a>
+                                <button onClick={onLaunch} className="px-8 py-4 bg-white border-2 border-[#1A1D1F] text-[#1A1D1F] rounded-xl font-bold flex items-center gap-2 hover:bg-gray-50 transition-colors"><Icons.Star className="w-5 h-5 fill-[#1A1D1F]"/> Rewards</button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-8 pt-8 border-t border-gray-100">
+                                <div><p className="text-3xl font-black text-[#6C5DD3]">5+</p><p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Years Exp</p></div>
+                                <div><p className="text-3xl font-black text-[#6C5DD3]">500+</p><p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Happy Clients</p></div>
+                                <div><p className="text-3xl font-black text-[#6C5DD3]">12+</p><p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Top Brands</p></div>
+                            </div>
+                        </div>
+                        
+                        <div className="relative animate-float-up hidden lg:block" style={{animationDelay: '0.2s'}}>
+                            <div className="absolute inset-0 bg-gradient-to-tr from-[#6C5DD3] to-[#B5E4CA] rounded-[2.5rem] rotate-3 opacity-20 blur-2xl"></div>
+                            <div className="aspect-[4/3] bg-gray-100 rounded-[2.5rem] overflow-hidden relative shadow-2xl ring-8 ring-white z-10">
+                                {/* IMPORTANT: Make sure 1000102308.jpg is in same folder */}
+                                <img src="1000102308.jpg" className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700" alt="Store Front" onerror="this.src='https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&q=80&w=1000'" />
+                                <div className="absolute bottom-8 left-8 right-8 bg-white/90 backdrop-blur-md p-6 rounded-3xl shadow-lg border border-white flex gap-4">
+                                    <div className="bg-[#B5E4CA] p-3 rounded-2xl text-[#1A1D1F]"><Icons.PaintBucket className="w-6 h-6"/></div>
+                                    <div><h3 className="font-bold text-lg">Official JSW Partner</h3><p className="text-sm text-gray-500">Authorized Dealer</p></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Brands Section (Revamped) */}
+                    <section id="brands" className="py-24 bg-[#1A1D1F] text-white relative overflow-hidden">
+                         <div className="absolute top-0 right-0 w-96 h-96 bg-[#6C5DD3] rounded-full blur-[120px] opacity-20"></div>
+                         <div className="max-w-7xl mx-auto px-4 relative z-10">
+                            <div className="text-center mb-16">
+                                <span className="text-[#B5E4CA] font-bold tracking-widest text-xs uppercase mb-2 block">Our Partners</span>
+                                <h2 className="text-4xl font-black mb-4">Trusted Brands</h2>
+                                <p className="text-gray-400">Collaborating with world leaders in construction</p>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                {['Asian Paints','JSW Paints','National Paints','Orient Electric','Havells','Astral','Supreme','Jaquar','Essco','Century Ply','Häfele','Hettich'].map(b=>(
+                                    <div key={b} className="group h-24 bg-white/5 rounded-2xl flex flex-col items-center justify-center font-bold text-gray-300 hover:bg-[#6C5DD3] hover:text-white transition-all border border-white/5 hover:border-[#6C5DD3] hover:shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-1 cursor-default relative overflow-hidden">
+                                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"><Icons.BadgeCheck className="w-3 h-3 text-[#B5E4CA]"/></div>
+                                        <span className="z-10 text-sm px-2 text-center">{b}</span>
+                                    </div>
+                                ))}
+                            </div>
+                         </div>
+                    </section>
+
+                    {/* Products Grid */}
+                    <section id="products" className="py-24 bg-[#F8F9FA]">
+                        <div className="max-w-7xl mx-auto px-4">
+                            <div className="text-center mb-16">
+                                <h2 className="text-3xl font-black mb-4 text-[#1A1D1F]">Our Categories</h2>
+                            </div>
+                            <div className="grid md:grid-cols-3 gap-8">
+                                <ProdCard icon={Icons.PaintBucket} title="Premium Paints" desc="Asian Paints, JSW, National Paints" color="bg-purple-100 text-[#6C5DD3]"/>
+                                <ProdCard icon={Icons.HardHat} title="Electrical & Lighting" desc="Orient, Havells LED & Wiring" color="bg-yellow-100 text-yellow-600"/>
+                                <ProdCard icon={Icons.Truck} title="Pipes & Plumbing" desc="Astral, Supreme PVC Pipes" color="bg-green-100 text-green-600"/>
+                                <ProdCard icon={Icons.Package} title="Bathware & Sanitary" desc="Premium bathroom solutions from Jaquar, Essco, and Astral." color="bg-blue-100 text-blue-600"/>
+                                <ProdCard icon={Icons.Hammer} title="Plywood & Hardware" desc="Quality plywood and precision hardware from Century Ply, Häfele, Hettich." color="bg-orange-100 text-orange-600"/>
+                                <ProdCard icon={Icons.User} title="Consultation" desc="Expert project planning" color="bg-gray-200 text-gray-700"/>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    {/* About Section */}
+                    <section id="about" className="py-24 bg-white">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="grid lg:grid-cols-2 gap-16 items-center">
+                                <div>
+                                    <h2 className="text-3xl md:text-4xl font-black mb-6 tracking-tight text-[#1A1D1F]">About Concrete World</h2>
+                                    <p className="text-lg text-gray-600 mb-6 leading-relaxed">With 5 years of experience in the construction materials industry, Concrete World (Ayaan Hardware) has established itself as a reliable supplier of quality building materials in Aminagad since 2020.</p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
+                                        <div className="bg-[#F8F9FA] p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-[#6C5DD3] transition-colors"><h4 className="font-bold text-lg mb-2 text-[#6C5DD3]">Material Supply</h4><p className="text-sm text-gray-500">Comprehensive range of trusted brands.</p></div>
+                                        <div className="bg-[#F8F9FA] p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-[#6C5DD3] transition-colors"><h4 className="font-bold text-lg mb-2 text-[#6C5DD3]">Expert Consultation</h4><p className="text-sm text-gray-500">Professional guidance for planning.</p></div>
+                                        <div className="bg-[#F8F9FA] p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-[#6C5DD3] transition-colors"><h4 className="font-bold text-lg mb-2 text-[#6C5DD3]">Quality Assurance</h4><p className="text-sm text-gray-500">Rigorous checks for superior performance.</p></div>
+                                        <div className="bg-[#F8F9FA] p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-[#6C5DD3] transition-colors"><h4 className="font-bold text-lg mb-2 text-[#6C5DD3]">Timely Delivery</h4><p className="text-sm text-gray-500">Reliable delivery across Aminagad.</p></div>
+                                    </div>
+                                </div>
+                                <div className="space-y-6">
+                                    <div className="bg-gradient-to-br from-[#6C5DD3] to-[#5a4db0] text-white p-8 rounded-3xl relative overflow-hidden shadow-xl shadow-indigo-200">
+                                        <Icons.Quote className="w-12 h-12 text-[#B5E4CA] opacity-20 absolute top-4 right-4" />
+                                        <p className="text-lg italic mb-6">"Concrete World has been our reliable partner for multiple projects. Their quality materials and professional service have contributed significantly to our success."</p>
+                                        <div className="flex items-center gap-4"><div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold">R</div><div><p className="font-bold">Ravi Kumar</p><p className="text-xs text-purple-200">Project Manager</p></div></div>
+                                    </div>
+                                    <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 relative overflow-hidden">
+                                        <Icons.Quote className="w-12 h-12 text-gray-200 absolute top-4 right-4" />
+                                        <p className="text-lg italic text-gray-600 mb-6">"Excellent product range and knowledgeable staff. Their consultation service helped us select the right materials within budget constraints."</p>
+                                        <div className="flex items-center gap-4"><div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center font-bold text-gray-600">S</div><div><p className="font-bold">Sunita Patil</p><p className="text-xs text-gray-400">Architect</p></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Contact Section */}
+                    <section id="contact" className="py-24 bg-[#F8F9FA] relative">
+                        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="text-center mb-16"><h2 className="text-3xl md:text-4xl font-black mb-4 tracking-tight">Get In Touch</h2><p className="text-gray-500 font-medium">Contact us for all your building material needs</p></div>
+                            <div className="grid lg:grid-cols-2 gap-12">
+                                <div className="grid sm:grid-cols-2 gap-6">
+                                    <div className="bg-white p-8 rounded-3xl text-center hover:shadow-xl transition-all hover:-translate-y-1"><div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm text-[#6C5DD3]"><Icons.MapPin className="w-6 h-6"/></div><h4 className="font-bold mb-2">Visit Store</h4><p className="text-sm text-gray-500">AK Plaza, Near Temple<br/>Bagalkot Road, Aminagad</p></div>
+                                    <div className="bg-white p-8 rounded-3xl text-center hover:shadow-xl transition-all hover:-translate-y-1"><div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm text-[#6C5DD3]"><Icons.Phone className="w-6 h-6"/></div><h4 className="font-bold mb-2">Call Us</h4><p className="text-sm text-gray-500"><a href="tel:8660775309" className="hover:text-[#6C5DD3]">8660775309</a></p></div>
+                                    <div className="bg-white p-8 rounded-3xl text-center hover:shadow-xl transition-all hover:-translate-y-1"><div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm text-[#6C5DD3]"><Icons.Mail className="w-6 h-6"/></div><h4 className="font-bold mb-2">Email Us</h4><p className="text-sm text-gray-500 truncate"><a href="mailto:concreteworldamingad@gmail.com" className="hover:text-[#6C5DD3]">concreteworldamingad@gmail.com</a></p></div>
+                                    <div className="bg-white p-8 rounded-3xl text-center hover:shadow-xl transition-all hover:-translate-y-1"><div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm text-[#6C5DD3]"><Icons.ArrowUpRight className="w-6 h-6"/></div><h4 className="font-bold mb-2">Website</h4><p className="text-sm text-gray-500">www.concreteworld.co.in</p></div>
+                                </div>
+                                <div className="bg-[#1A1D1F] p-8 rounded-[2.5rem] text-white shadow-2xl">
+                                    <h3 className="text-2xl font-bold mb-6">Get Your Quote</h3>
+                                    <form className="space-y-4">
+                                        <input type="text" placeholder="Your Name *" className="w-full bg-[#2B2E30] border-none rounded-xl p-4 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#B5E4CA]" />
+                                        <input type="tel" placeholder="Phone Number *" className="w-full bg-[#2B2E30] border-none rounded-xl p-4 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#B5E4CA]" />
+                                        <select className="w-full bg-[#2B2E30] border-none rounded-xl p-4 text-gray-300 focus:ring-2 focus:ring-[#B5E4CA]"><option value="" className="text-gray-500">Select Category</option><option value="paints">Paints</option><option value="hardware">Hardware</option><option value="cement">Cement/Steel</option></select>
+                                        <textarea rows="4" placeholder="Project Details" className="w-full bg-[#2B2E30] border-none rounded-xl p-4 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#B5E4CA]"></textarea>
+                                        <button className="w-full bg-[#6C5DD3] text-white font-bold py-4 rounded-xl hover:bg-[#5a4db0] transition-colors shadow-lg">Submit Request</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <footer className="bg-[#1A1D1F] text-white py-12 text-center border-t border-gray-800">
+                        <h3 className="font-black text-xl mb-2 uppercase">Concrete World</h3>
+                        <p className="text-gray-500 text-sm">Aminagad, Karnataka • +91 86607 75309</p>
+                    </footer>
                 </div>
-                <nav class="nav" id="nav">
-                    <ul class="nav-list">
-                        <li><a href="#home" class="nav-link">Home</a></li>
-                        <li><a href="#products" class="nav-link">Products</a></li>
-                        <li><a href="#brands" class="nav-link">Brands</a></li>
-                        <li><a href="#about" class="nav-link">About</a></li>
-                        <li><a href="#contact" class="nav-link">Contact</a></li>
-                    </ul>
-                </nav>
-                <div class="header-actions">
-                    <a href="tel:8660775309" class="btn btn-secondary">Call Now</a>
-                    <a href="#contact" class="btn btn-primary">Get Quote</a>
-                    <button class="mobile-menu-toggle" id="mobileMenuToggle">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </button>
-                </div>
+            );
+        }
+
+        const ProdCard = ({icon:I, title, desc, color}) => (
+            <div className="bg-white p-8 rounded-3xl shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 border border-gray-100 group cursor-default">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ${color} group-hover:scale-110 transition-transform`}><I className="w-7 h-7"/></div>
+                <h3 className="font-bold text-lg mb-2 text-[#1A1D1F] group-hover:text-[#6C5DD3] transition-colors">{title}</h3><p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
             </div>
-        </div>
-    </header>
+        );
 
-    <!-- Hero Section -->
-    <section id="home" class="hero">
-        <div class="container">
-            <div class="hero-content">
-                <div class="hero-text">
-                    <h1 class="hero-title">
-                        Your Trusted Partner for Premium Building Materials
-                    </h1>
-                    <p class="hero-subtitle">Serving Aminagad with quality construction materials from industry-leading brands since 2020. Professional expertise, reliable service, competitive pricing.</p>
-                    <div class="hero-stats">
-                        <div class="stat-item">
-                            <div class="stat-number" data-count="5">0</div>
-                            <span class="stat-label">Years Experience</span>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number" data-count="500">0</div>
-                            <span class="stat-label">Satisfied Customers</span>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number" data-count="12">0</div>
-                            <span class="stat-label">Trusted Brands</span>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number" data-count="2000">0</div>
-                            <span class="stat-label">Projects Completed</span>
-                        </div>
-                    </div>
-                    <div class="hero-actions">
-                        <a href="#products" class="btn btn-primary btn-lg">Explore Products</a>
-                        <a href="tel:8660775309" class="btn btn-outline btn-lg">Call for Quote</a>
-                    </div>
-                </div>
-                <div class="hero-image">
-                    <div class="hero-visual">
-                        <div class="hero-card">
-                            <h3>Professional Service</h3>
-                            <p>Expert consultation and quality materials for every project since 2020</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+        /* ===================================================================
+           PART 2: STAR REWARDS APP
+           =================================================================== */
+        function StarRewardsApp({ user, onBack }) {
+            const [tab, setTab] = useState('scan');
+            const [tokens, setTokens] = useState([]);
+            const [painters, setPainters] = useState([]);
 
-    <!-- Products Section -->
-    <section id="products" class="products">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Our Product Categories</h2>
-                <p class="section-subtitle">Comprehensive range of building materials from trusted manufacturers</p>
-            </div>
-            <div class="products-grid">
-                <div class="product-card" data-category="paints">
-                    <div class="product-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M2 20h20"/>
-                            <path d="M4 20V10a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10"/>
-                            <path d="M8 4v4"/>
-                            <path d="M16 4v4"/>
-                            <circle cx="8" cy="2" r="2"/>
-                            <circle cx="16" cy="2" r="2"/>
-                        </svg>
-                    </div>
-                    <h3 class="product-title">Premium Paints</h3>
-                    <p class="product-description">High-quality interior and exterior paints from trusted brands including Asian Paints, JSW Paints, and National Paints.</p>
-                    <div class="product-features">
-                        <span class="feature-tag">Interior & Exterior</span>
-                        <span class="feature-tag">Weather Resistant</span>
-                        <span class="feature-tag">Premium Quality</span>
-                        <span class="feature-tag">Wide Color Range</span>
-                    </div>
-                </div>
+            useEffect(() => {
+                if(!user || !db) return;
+                const unsubT = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('tokens').onSnapshot(s => setTokens(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                const unsubP = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('painters').onSnapshot(s => setPainters(s.docs.map(d => ({id:d.id, ...d.data()}))));
+                return () => { unsubT(); unsubP(); };
+            }, [user]);
 
-                <div class="product-card" data-category="electrical">
-                    <div class="product-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <circle cx="12" cy="12" r="5"/>
-                            <path d="M12 1v6m0 6v6"/>
-                            <path d="m4.22 4.22 4.24 4.24m7.07 7.07 4.24 4.24"/>
-                            <path d="M1 12h6m6 0h6"/>
-                            <path d="m4.22 19.78 4.24-4.24m7.07-7.07 4.24-4.24"/>
-                        </svg>
-                    </div>
-                    <h3 class="product-title">Electrical & Lighting</h3>
-                    <p class="product-description">Complete electrical solutions including LED lighting, wiring accessories, and electrical components from Orient and Havells.</p>
-                    <div class="product-features">
-                        <span class="feature-tag">LED Lighting Solutions</span>
-                        <span class="feature-tag">Wiring Accessories</span>
-                        <span class="feature-tag">Energy Efficient</span>
-                        <span class="feature-tag">Latest Technology</span>
-                    </div>
-                </div>
+            const seed = () => {
+                const batch = db.batch();
+                ['HALO400-D1','AURUS200-D1','PIXA100-D1'].forEach(id => {
+                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('tokens').doc(id);
+                    batch.set(ref, {id, productName:'Demo Paint 20L', rewardAmount: parseInt(id.match(/\d+/)[0]), status:'new'});
+                });
+                batch.commit().then(()=>alert("Demo Data Loaded"));
+            };
 
-                <div class="product-card" data-category="plumbing">
-                    <div class="product-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M6 8a6 6 0 0 1 12 0c0 7-6 9-6 9s-6-2-6-9"/>
-                            <path d="M8 14h8"/>
-                            <path d="M7 18h10"/>
-                            <path d="M12 4v4"/>
-                        </svg>
-                    </div>
-                    <h3 class="product-title">Pipes & Plumbing</h3>
-                    <p class="product-description">Comprehensive plumbing solutions with PVC and metal pipes, fittings, and accessories from Astral and Supreme.</p>
-                    <div class="product-features">
-                        <span class="feature-tag">PVC & Metal Pipes</span>
-                        <span class="feature-tag">Complete Fittings</span>
-                        <span class="feature-tag">Durable Quality</span>
-                        <span class="feature-tag">Leak-Proof Systems</span>
-                    </div>
-                </div>
+            return (
+                <div className="min-h-screen bg-[#F8F9FA] pb-32 animate-float-up text-[#11142D]">
+                    <header className="sticky top-0 z-30 pt-4 px-4 pb-2 bg-[#F8F9FA]/95 backdrop-blur">
+                        <div className="bg-[#1A1D1F] rounded-2xl p-4 shadow-xl flex justify-between items-center text-white border border-gray-800">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-[#B5E4CA] p-2 rounded-lg text-black"><Icons.PaintBucket className="w-5 h-5"/></div>
+                                <div><h2 className="font-black leading-none">CONCRETE WORLD</h2><p className="text-[10px] text-gray-400 font-bold uppercase">Portal</p></div>
+                            </div>
+                            <button onClick={onBack} className="p-2 hover:bg-white/10 rounded-full transition"><Icons.LogOut className="w-5 h-5 text-gray-400"/></button>
+                        </div>
+                    </header>
 
-                <div class="product-card" data-category="bathware">
-                    <div class="product-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M7 12v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-5"/>
-                            <path d="M3 12h18"/>
-                            <path d="M12 2v10"/>
-                            <path d="M8 7l4-5 4 5"/>
-                        </svg>
-                    </div>
-                    <h3 class="product-title">Bathware & Sanitary</h3>
-                    <p class="product-description">Premium bathroom solutions and sanitary ware from leading brands Jaquar, Essco, and Astral.</p>
-                    <div class="product-features">
-                        <span class="feature-tag">Premium Collections</span>
-                        <span class="feature-tag">Modern Designs</span>
-                        <span class="feature-tag">Water Efficient</span>
-                        <span class="feature-tag">Easy Installation</span>
-                    </div>
-                </div>
+                    <main className="px-4 py-4">
+                        {tab === 'scan' && <Scanner tokens={tokens} painters={painters} onSeed={seed} />}
+                        {tab === 'painters' && <PaintersView tokens={tokens} painters={painters} />}
+                        {tab === 'dash' && <Dashboard tokens={tokens} />}
+                        {tab === 'reports' && <ReportsView tokens={tokens} />}
+                    </main>
 
-                <div class="product-card" data-category="hardware">
-                    <div class="product-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M9 12l2 2 4-4"/>
-                            <path d="M21 12c.552 0 1-.448 1-1V5c0-.552-.448-1-1-1H3c-.552 0-1 .448-1 1v6c0 .552.448 1 1 1"/>
-                            <path d="M3 12v7c0 .552.448 1 1 1h16c.552 0 1-.448 1-1v-7"/>
-                            <path d="M8 21v-9"/>
-                            <path d="M16 21v-9"/>
-                        </svg>
-                    </div>
-                    <h3 class="product-title">Plywood & Hardware</h3>
-                    <p class="product-description">Quality plywood and precision hardware solutions from Century Ply, Häfele, and Hettich for interior applications.</p>
-                    <div class="product-features">
-                        <span class="feature-tag">Interior Solutions</span>
-                        <span class="feature-tag">Premium Hardware</span>
-                        <span class="feature-tag">Durable Materials</span>
-                        <span class="feature-tag">Precision Engineering</span>
+                    <div className="fixed bottom-6 left-6 right-6 z-40">
+                        <div className="bg-[#1A1D1F] text-gray-400 rounded-3xl h-20 shadow-2xl flex justify-around items-center px-4 max-w-md mx-auto border border-gray-800">
+                            <NavBtn active={tab==='scan'} onClick={()=>setTab('scan')} icon={Icons.QrCode} label="Scan" />
+                            <NavBtn active={tab==='painters'} onClick={()=>setTab('painters')} icon={Icons.Users} label="Painters" />
+                            <NavBtn active={tab==='dash'} onClick={()=>setTab('dash')} icon={Icons.LayoutDashboard} label="Dash" />
+                            <NavBtn active={tab==='reports'} onClick={()=>setTab('reports')} icon={Icons.BarChart3} label="Stats" />
+                        </div>
                     </div>
                 </div>
+            );
+        }
 
-                <div class="product-card" data-category="consultation">
-                    <div class="product-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-                        </svg>
-                    </div>
-                    <h3 class="product-title">Expert Consultation</h3>
-                    <p class="product-description">Professional guidance and technical support for material selection, project planning, and cost optimization.</p>
-                    <div class="product-features">
-                        <span class="feature-tag">Project Planning</span>
-                        <span class="feature-tag">Material Selection</span>
-                        <span class="feature-tag">Cost Optimization</span>
-                        <span class="feature-tag">Technical Support</span>
-                    </div>
-                    <div class="consultation-cta">
-                        <a href="tel:8660775309" class="btn btn-primary btn-sm">Schedule Consultation</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+        const NavBtn = ({active, onClick, icon:I, label}) => (
+            <button onClick={onClick} className={`flex flex-col items-center gap-1 w-14 ${active?'text-white':'hover:text-gray-300'}`}>
+                <div className={`p-2 rounded-xl transition-all ${active?'bg-[#6C5DD3] shadow-lg shadow-indigo-900/50':''}`}><I className="w-5 h-5"/></div>
+                {active && <span className="text-[10px] font-bold">{label}</span>}
+            </button>
+        );
 
-    <!-- Trusted Brand Partners Section -->
-    <section id="brands" class="brands">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title brands-title">TRUSTED BRAND PARTNERS</h2>
-                <p class="section-subtitle">Premium quality from industry-leading manufacturers</p>
-            </div>
-            <div class="brands-grid">
-                <div class="brand-item">Asian Paints</div>
-                <div class="brand-item">JSW Paints</div>
-                <div class="brand-item">National Paints</div>
-                <div class="brand-item">Orient Electric</div>
-                <div class="brand-item">Havells</div>
-                <div class="brand-item">Astral</div>
-                <div class="brand-item">Supreme</div>
-                <div class="brand-item">Jaquar</div>
-                <div class="brand-item">Essco</div>
-                <div class="brand-item">Century Ply</div>
-                <div class="brand-item">Häfele</div>
-                <div class="brand-item">Hettich</div>
-            </div>
-        </div>
-    </section>
+        // --- SCANNER & WIZARD ---
+        function Scanner({tokens, painters, onSeed}) {
+            const [view, setView] = useState('idle');
+            const [input, setInput] = useState('');
+            const [scanned, setScanned] = useState(null);
+            const [error, setError] = useState('');
+            const [form, setForm] = useState({p:'', s:'', a:''});
+            const [pSearch, setPSearch] = useState('');
+            const [showReg, setShowReg] = useState(false);
+            const [showDrop, setShowDrop] = useState(false);
+            const areas = ['Aminagad','Sulibhavi','Kamatagi','Hungund','Ilkal','Bagalkot','Other'];
+            const appId = 'default-app-id';
 
-    <!-- About Section -->
-    <section id="about" class="about">
-        <div class="container">
-            <div class="about-content">
-                <div class="about-text">
-                    <h2 class="section-title">About Concrete World</h2>
-                    <p class="section-subtitle">Your trusted partner for premium building materials in Aminagad</p>
-                    <p>With 5 years of experience in the construction materials industry, Concrete World (Ayaan Hardware) has established itself as a reliable supplier of quality building materials in Aminagad since 2020. We pride ourselves on offering professional expertise, reliable service, and competitive pricing to contractors, builders, and homeowners.</p>
-                    <div class="services-grid">
-                        <div class="service-item">
-                            <h4>Material Supply</h4>
-                            <p>Comprehensive range of building materials from trusted brands with quality assurance.</p>
-                        </div>
-                        <div class="service-item">
-                            <h4>Expert Consultation</h4>
-                            <p>Professional guidance for material selection and project planning from experienced team.</p>
-                        </div>
-                        <div class="service-item">
-                            <h4>Quality Assurance</h4>
-                            <p>All products undergo rigorous quality checks to ensure superior performance and durability.</p>
-                        </div>
-                        <div class="service-item">
-                            <h4>Timely Delivery</h4>
-                            <p>Reliable delivery services across Aminagad and surrounding areas with flexible scheduling.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="testimonials">
-                    <h3>What Our Customers Say</h3>
-                    <div class="testimonial-card">
-                        <p>"Concrete World has been our reliable partner for multiple projects. Their quality materials and professional service have contributed significantly to our success."</p>
-                        <div class="testimonial-author">
-                            <strong>Ravi Kumar</strong>
-                            <span>Project Manager, Kumar Construction</span>
-                        </div>
-                    </div>
-                    <div class="testimonial-card">
-                        <p>"Excellent product range and knowledgeable staff. Their consultation service helped us select the right materials within budget constraints."</p>
-                        <div class="testimonial-author">
-                            <strong>Sunita Patil</strong>
-                            <span>Architect, Patil Builders</span>
-                        </div>
-                    </div>
-                    <div class="testimonial-card">
-                        <p>"Consistent quality and timely delivery. Concrete World understands the construction industry requirements and delivers accordingly."</p>
-                        <div class="testimonial-author">
-                            <strong>Mahesh Reddy</strong>
-                            <span>Contractor, Reddy Infrastructure</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+            const scan = (e) => {
+                e.preventDefault(); setError('');
+                const t = tokens.find(k => k.id.toUpperCase() === input.trim().toUpperCase());
+                if(!t) { setError('Invalid Code'); return; }
+                setScanned(t); setView(t.status === 'redeemed' ? 'redeemed' : 'step1');
+                setForm({p:'', s:'', a:''}); setPSearch('');
+            };
 
-    <!-- Contact Section -->
-    <section id="contact" class="contact">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Get In Touch</h2>
-                <p class="section-subtitle">Contact us for all your building material needs</p>
-            </div>
-            <div class="contact-content">
-                <div class="contact-info">
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                <circle cx="12" cy="10" r="3"/>
-                            </svg>
-                        </div>
-                        <div class="contact-details">
-                            <h4>Visit Our Store</h4>
-                            <p>AK Plaza, Near Hadibasaveshwara Temple<br>Bagalkot Road, Aminagad</p>
-                        </div>
-                    </div>
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-                            </svg>
-                        </div>
-                        <div class="contact-details">
-                            <h4>Call Us</h4>
-                            <p><a href="tel:8660775309">8660775309</a></p>
-                        </div>
-                    </div>
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="2" y="4" width="20" height="16" rx="2"/>
-                                <path d="m2 6 10 6L22 6"/>
-                            </svg>
-                        </div>
-                        <div class="contact-details">
-                            <h4>Email Us</h4>
-                            <p><a href="mailto:concreteworldamingad@gmail.com">concreteworldamingad@gmail.com</a></p>
-                        </div>
-                    </div>
-                    <div class="contact-item">
-                        <div class="contact-icon">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <path d="M2 12h20"/>
-                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                            </svg>
-                        </div>
-                        <div class="contact-details">
-                            <h4>Website</h4>
-                            <p>www.concreteworld.co.in</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="contact-form">
-                    <h3>Get Your Quote</h3>
-                    <form id="quoteForm">
-                        <div class="form-group">
-                            <label for="name" class="form-label">Name *</label>
-                            <input type="text" id="name" class="form-control" placeholder="Your Name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="phone" class="form-label">Phone Number *</label>
-                            <input type="tel" id="phone" class="form-control" placeholder="Phone Number" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" id="email" class="form-control" placeholder="Email Address">
-                        </div>
-                        <div class="form-group">
-                            <label for="category" class="form-label">Product Category *</label>
-                            <select id="category" class="form-control" required>
-                                <option value="">Select Product Category</option>
-                                <option value="paints">Premium Paints</option>
-                                <option value="electrical">Electrical & Lighting</option>
-                                <option value="plumbing">Pipes & Plumbing</option>
-                                <option value="bathware">Bathware & Sanitary</option>
-                                <option value="hardware">Plywood & Hardware</option>
-                                <option value="consultation">Expert Consultation</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="details" class="form-label">Project Details</label>
-                            <textarea id="details" class="form-control" rows="4" placeholder="Tell us about your project requirements"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-full-width">Request Quote</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </section>
+            const redeem = async () => {
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('tokens').doc(scanned.id).update({
+                    status:'redeemed', painterName: form.p, siteName: form.s, area: form.a, redeemedAt: new Date().toISOString()
+                });
+                setScanned({...scanned, status:'redeemed', painterName: form.p});
+                setView('success');
+            };
+            
+            const getAmt = (id) => { id=id.toUpperCase(); if(id.includes('HALO400'))return 400; if(id.includes('200'))return 200; if(id.includes('100'))return 100; return 0; };
+            const filteredPainters = painters.filter(p=>(p.name||'').toLowerCase().includes(pSearch.toLowerCase()));
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section main-section">
-                    <div class="footer-logo">
-                        <h3>Concrete World (Ayaan Hardware)</h3>
-                    </div>
-                    <p>Your trusted partner for premium building materials in Aminagad since 2020. Professional expertise, reliable service, competitive pricing.</p>
-                    <div class="footer-contact">
-                        <p><a href="tel:8660775309">8660775309</a></p>
-                        <p><a href="mailto:concreteworldamingad@gmail.com">concreteworldamingad@gmail.com</a></p>
-                        <p>www.concreteworld.co.in</p>
-                    </div>
-                </div>
-                <div class="footer-section">
-                    <h4>Quick Links</h4>
-                    <ul class="footer-links">
-                        <li><a href="#home" class="footer-link">Home</a></li>
-                        <li><a href="#products" class="footer-link">Products</a></li>
-                        <li><a href="#brands" class="footer-link">Brands</a></li>
-                        <li><a href="#about" class="footer-link">About</a></li>
-                        <li><a href="#contact" class="footer-link">Contact</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Our Products</h4>
-                    <ul class="footer-links">
-                        <li>Premium Paints</li>
-                        <li>Electrical & Lighting</li>
-                        <li>Pipes & Plumbing</li>
-                        <li>Bathware & Sanitary</li>
-                        <li>Plywood & Hardware</li>
-                        <li>Expert Consultation</li>
-                    </ul>
-                </div>
-                <div class="footer-section">  
-                    <h4>Visit Our Store</h4>
-                    <p>AK Plaza, Near Hadibasaveshwara Temple<br>Bagalkot Road, Aminagad</p>
-                    <div class="footer-actions">
-                        <a href="https://wa.me/918660775309" target="_blank" class="btn btn-outline btn-sm">WhatsApp</a>
-                        <a href="tel:8660775309" class="btn btn-secondary btn-sm">Call Now</a>
-                    </div>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2025 Concrete World (Ayaan Hardware). All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
+            return (
+                <div className="pb-20">
+                    {showReg && <RegModal onClose={()=>setShowReg(false)} onReg={n=>{setForm({...form, p:n}); setPSearch(n); setShowReg(false);}} />}
+                    
+                    {view === 'idle' && (
+                        <div className="trantor-card p-8 min-h-[50vh] flex flex-col justify-center text-center">
+                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6"><Icons.QrCode className="w-8 h-8"/></div>
+                            <h2 className="text-2xl font-bold">Scan Token</h2>
+                            <form onSubmit={scan} className="mt-6 space-y-4">
+                                <input value={input} onChange={e=>setInput(e.target.value)} placeholder="HALO400-XXXX" className="trantor-input w-full p-4 text-center font-mono font-bold text-lg uppercase" autoFocus />
+                                <button className="w-full bg-[#1A1D1F] text-white py-4 rounded-xl font-bold">Verify</button>
+                            </form>
+                            {error && <div className="mt-4 text-red-500 font-bold bg-red-50 p-2 rounded">{error}</div>}
+                            {!tokens.length && <button onClick={onSeed} className="mt-8 text-xs font-bold text-gray-400">LOAD DEMO DATA</button>}
+                        </div>
+                    )}
+                    
+                    {view === 'redeemed' && (
+                        <div className="trantor-card p-8 bg-red-50 border-2 border-red-100 text-center relative overflow-hidden">
+                            <div className="absolute -top-5 -right-5 opacity-20 text-red-300"><Icons.XCircle className="w-48 h-48"/></div>
+                            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow"><Icons.X className="w-10 h-10 text-red-600"/></div>
+                            <h2 className="text-2xl font-black text-red-800">ALREADY REDEEMED</h2>
+                            <p className="text-xs font-bold text-red-400 mb-6 uppercase tracking-widest">Do not pay</p>
+                            <div className="bg-white/60 p-4 rounded-xl text-left text-sm space-y-2 mb-6">
+                                <div className="flex justify-between"><span className="font-bold text-gray-500">By</span><b>{scanned.painterName}</b></div>
+                                <div className="flex justify-between"><span className="font-bold text-gray-500">Date</span><b>{new Date(scanned.redeemedAt).toLocaleDateString()}</b></div>
+                            </div>
+                            <button onClick={()=>setView('idle')} className="w-full bg-red-700 text-white py-4 rounded-xl font-bold shadow-lg">Close</button>
+                        </div>
+                    )}
 
-    <script src="app.js"></script>
+                    {view.startsWith('step') && (
+                        <div className="fixed inset-0 z-50 bg-[#1A1D1F]/90 backdrop-blur-sm p-4 overflow-y-auto">
+                            <div className="bg-white rounded-[2rem] p-6 max-w-md mx-auto mt-10 shadow-2xl relative">
+                                <button onClick={()=>setView('idle')} className="absolute top-6 right-6"><Icons.X/></button>
+                                <h2 className="text-2xl font-black mb-1">Redeem</h2>
+                                <p className="text-sm text-gray-500 mb-6">Step {view.replace('step','')} of 3</p>
+                                <div className="bg-gray-50 p-4 rounded-2xl mb-6 flex justify-between items-center">
+                                    <div><p className="text-xs font-bold text-gray-400 uppercase">Value</p><p className="text-2xl font-black text-indigo-600">{getAmt(scanned.id)} RS</p></div>
+                                    <div className="text-right"><p className="font-bold text-sm">{scanned.productName}</p><p className="font-mono text-xs text-gray-400">{scanned.id}</p></div>
+                                </div>
+                                {view === 'step1' && (
+                                    <>
+                                        <div className="relative mb-4">
+                                            <input value={pSearch} onChange={e=>{setPSearch(e.target.value); setForm({...form, p:e.target.value}); setShowDrop(true);}} onFocus={()=>setShowDrop(true)} className="trantor-input w-full p-4 pl-10 font-bold" placeholder="Search Painter..." autoFocus />
+                                            <Icons.Search className="w-4 h-4 text-gray-400 absolute left-4 top-5"/>
+                                            {showDrop && (
+                                                <div className="absolute top-full left-0 right-0 mt-2 bg-white border rounded-xl shadow-xl max-h-48 overflow-y-auto z-50">
+                                                    <div className="p-2 border-b"><button onClick={()=>{setShowReg(true); setShowDrop(false);}} className="w-full p-3 bg-black text-white font-bold text-sm flex items-center justify-center gap-2"><Icons.UserPlus className="w-4 h-4"/> New Painter</button></div>
+                                                    {filteredPainters.map(p=>(
+                                                        <div key={p.id} onClick={()=>{setForm({...form, p:p.name}); setPSearch(p.name); setShowDrop(false);}} className="p-3 border-b hover:bg-gray-50 cursor-pointer font-bold text-sm">{p.name} <span className="text-xs text-gray-400 font-normal">({p.place})</span></div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button onClick={()=>form.p && setView('step2')} disabled={!form.p} className="w-full bg-black text-white py-4 rounded-xl font-bold">Next</button>
+                                    </>
+                                )}
+                                {view === 'step2' && (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {['Aminagad','Sulibhavi','Kamatagi','Hungund','Ilkal','Bagalkot','Other'].map(a=><button key={a} onClick={()=>{setForm({...form, a}); setView('step3');}} className="p-4 border rounded-xl font-bold text-sm hover:bg-indigo-50 text-left">{a}</button>)}
+                                    </div>
+                                )}
+                                {view === 'step3' && (
+                                    <>
+                                        <div className="flex gap-2 mb-4"><span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold">{form.p}</span><span className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-xs font-bold">{form.a}</span></div>
+                                        <input value={form.s} onChange={e=>setForm({...form, s:e.target.value})} className="trantor-input w-full p-4 font-bold mb-6" placeholder="Site / Owner Name" autoFocus />
+                                        <button onClick={redeem} disabled={!form.s} className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-xl">Confirm</button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    {view === 'success' && (
+                        <div className="trantor-card bg-[#1A1D1F] text-white p-10 text-center flex flex-col items-center justify-center min-h-[50vh]">
+                            <div className="w-20 h-20 bg-[#B5E4CA] rounded-full flex items-center justify-center text-black mb-6 animate-bounce"><Icons.CheckCircle className="w-10 h-10"/></div>
+                            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">Total Amount Redeemed</p>
+                            <h1 className="text-5xl font-black mb-8 text-[#B5E4CA]">{getAmt(scanned.id)} RS</h1>
+                            <button onClick={()=>setView('idle')} className="w-full bg-white text-black py-4 rounded-xl font-bold">Scan Next</button>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function PaintersView({ tokens, painters }) {
+            const getAmt = (id) => { id=(id||'').toUpperCase(); if(id.includes('HALO400'))return 400; if(id.includes('AURUS200'))return 200; if(id.includes('PIXA100'))return 100; if(id.includes('400'))return 400; if(id.includes('200'))return 200; if(id.includes('100'))return 100; return 0; };
+            const stats = useMemo(() => {
+                const s = {};
+                painters.forEach(p => { if(p.name) s[p.name] = { ...p, total:0, count:0 }; });
+                tokens.filter(t=>t.status==='redeemed'&&t.painterName).forEach(t => {
+                    const n = t.painterName;
+                    if(!s[n]) s[n] = { name:n, place:'Unknown', total:0, count:0 };
+                    s[n].total += getAmt(t.id);
+                    s[n].count++;
+                });
+                return Object.values(s).sort((a,b)=>b.total - a.total);
+            }, [tokens, painters]);
+
+            const grandTotal = stats.reduce((acc, curr) => acc + curr.total, 0);
+            const top3 = stats.slice(0,3);
+
+            return (
+                <div className="pb-20 space-y-4">
+                    <div className="flex justify-between items-end px-2">
+                        <div><h2 className="text-2xl font-bold">Painters</h2><p className="text-xs text-gray-500 font-bold">Total Payout: <span className="text-[#6C5DD3]">₹{grandTotal.toLocaleString()}</span></p></div>
+                        <div className="bg-white px-3 py-1 rounded-lg border text-xs font-bold flex gap-2 items-center"><Icons.Users className="w-3 h-3"/> {stats.length}</div>
+                    </div>
+                    {top3.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 items-end mb-4 px-2">
+                            {top3[1] && <div className="flex flex-col items-center"><div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-bold">{top3[1].name.charAt(0)}</div><p className="text-xs font-bold mt-1">{top3[1].name.split(' ')[0]}</p><p className="text-[10px]">₹{top3[1].total}</p><div className="h-16 w-full bg-gray-200 rounded-t-xl mt-1"></div></div>}
+                            {top3[0] && <div className="flex flex-col items-center"><Icons.Crown className="w-4 h-4 text-yellow-500 mb-1"/><div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center font-bold border-2 border-yellow-400">{top3[0].name.charAt(0)}</div><p className="text-xs font-bold mt-1">{top3[0].name.split(' ')[0]}</p><p className="text-[10px] font-black text-[#6C5DD3]">₹{top3[0].total}</p><div className="h-24 w-full bg-yellow-100 rounded-t-xl mt-1"></div></div>}
+                            {top3[2] && <div className="flex flex-col items-center"><div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center font-bold">{top3[2].name.charAt(0)}</div><p className="text-xs font-bold mt-1">{top3[2].name.split(' ')[0]}</p><p className="text-[10px]">₹{top3[2].total}</p><div className="h-12 w-full bg-orange-100 rounded-t-xl mt-1"></div></div>}
+                        </div>
+                    )}
+                    <div className="space-y-3">
+                        {stats.map((p, i) => (
+                            <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border flex justify-between items-center">
+                                <div className="flex gap-3 items-center">
+                                    <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center font-bold text-[#1A1D1F]">{p.name.charAt(0)}</div>
+                                    <div><h4 className="font-bold text-sm">{p.name}</h4><p className="text-[10px] text-gray-400">{p.place} • {p.count} Tkn</p></div>
+                                </div>
+                                <div className="font-black text-[#6C5DD3]">₹{p.total.toLocaleString()}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function Dashboard({ tokens }) {
+            const [showGen, setShowGen] = useState(false);
+            const [qty, setQty] = useState(10);
+            const [type, setType] = useState('HALO400');
+            const getAmt = (id) => id.includes('400')?400:id.includes('200')?200:100;
+            const appId = 'default-app-id';
+            
+            const generate = async (e) => {
+                e.preventDefault();
+                const batch = db.batch();
+                let csv = "Token ID\n";
+                for(let i=0; i<qty; i++) {
+                    const id = `${type}-${Math.random().toString(36).substr(2,5).toUpperCase()}`;
+                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('tokens').doc(id);
+                    batch.set(ref, { id, productName: type.includes('HALO')?'Halo Emulsion':type.includes('AURUS')?'Aurus Emulsion':'Pixa', status: 'new', rewardAmount: parseInt(type.match(/\d+/)[0]) });
+                    csv += `${id}\n`;
+                }
+                await batch.commit();
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `TOKENS_${type}_${new Date().toISOString()}.csv`; a.click();
+                setShowGen(false);
+            };
+
+            return (
+                <div className="pb-20 space-y-4">
+                    <div className="flex justify-between items-center px-2">
+                        <h2 className="text-2xl font-bold">History</h2>
+                        <button onClick={()=>setShowGen(true)} className="bg-[#1A1D1F] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2"><Icons.Plus className="w-4 h-4"/> Generate</button>
+                    </div>
+                    <div className="space-y-3">
+                        {tokens.slice(0,10).map(t=>(
+                            <div key={t.id} className="dropify-card p-4 flex justify-between items-center">
+                                <div className="flex gap-3 items-center">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.status==='redeemed'?'bg-[#B5E4CA] text-black':'bg-gray-100 text-gray-400'}`}>{t.status==='redeemed'?<Icons.CheckCircle className="w-5 h-5"/>:<Icons.Package className="w-5 h-5"/>}</div>
+                                    <div><p className="font-bold text-sm text-[#1A1D1F]">{t.id}</p><p className="text-[10px] font-bold text-gray-400 uppercase">{t.status}</p></div>
+                                </div>
+                                <div className="text-right"><p className="font-black text-[#6C5DD3]">₹{getAmt(t.id)}</p><p className="text-[10px] font-bold text-gray-400">{t.painterName ? t.painterName.split(' ')[0] : '-'}</p></div>
+                            </div>
+                        ))}
+                    </div>
+                    {showGen && (
+                        <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-3xl p-6 w-full max-w-sm">
+                                <h3 className="font-bold text-xl mb-4">Generate Tokens</h3>
+                                <form onSubmit={generate} className="space-y-4">
+                                    <select className="trantor-input w-full p-3 font-bold" value={type} onChange={e=>setType(e.target.value)}>
+                                        <option value="HALO400">HALO 20L (400 Rs)</option>
+                                        <option value="HALO200">HALO 10L (200 Rs)</option>
+                                        <option value="AURUS200">AURUS 20L (200 Rs)</option>
+                                        <option value="AURUS100">AURUS 10L (100 Rs)</option>
+                                        <option value="PIXA200">PIXA 20L (200 Rs)</option>
+                                        <option value="PIXA100">PIXA 10L (100 Rs)</option>
+                                    </select>
+                                    <input type="number" className="trantor-input w-full p-3 font-bold" value={qty} onChange={e=>setQty(e.target.value)} min="1" max="100"/>
+                                    <button className="w-full bg-[#1A1D1F] text-white py-3 rounded-xl font-bold">Generate</button>
+                                    <button type="button" onClick={()=>setShowGen(false)} className="w-full text-gray-500 font-bold text-sm">Cancel</button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function ReportsView({ tokens }) {
+            const redeemed = tokens.filter(t=>t.status==='redeemed');
+            const total = redeemed.reduce((acc,t)=>acc+(t.rewardAmount||(t.id.includes('400')?400:t.id.includes('200')?200:100)),0);
+            const brands = { Halo:0, Aurus:0, Pixa:0 };
+            redeemed.forEach(t=>{ const id=(t.id||'').toUpperCase(); if(id.includes('HALO')) brands.Halo++; else if(id.includes('AURUS')) brands.Aurus++; else if(id.includes('PIXA')) brands.Pixa++; });
+            
+            return (
+                <div className="space-y-4 animate-float-up pb-20">
+                    <div className="flex justify-between items-end px-2"><h2 className="text-2xl font-bold">Analytics</h2></div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="dropify-purple-card p-4 shadow-lg shadow-indigo-200">
+                            <p className="text-indigo-200 text-[10px] font-bold uppercase mb-1">Payout</p><h3 className="text-2xl font-black">₹{(total/1000).toFixed(1)}k</h3>
+                        </div>
+                        <div className="dropify-card p-4 flex flex-col justify-between">
+                            <div className="w-8 h-8 bg-[#B5E4CA] rounded-lg flex items-center justify-center mb-2"><Icons.Users className="w-4 h-4"/></div>
+                            <div><p className="text-gray-400 text-[10px] font-bold uppercase">Painters</p><h3 className="text-xl font-bold">{new Set(redeemed.map(t=>t.painterName)).size}</h3></div>
+                        </div>
+                    </div>
+                    <div className="dropify-card p-5">
+                        <h3 className="font-bold text-sm mb-4 flex items-center gap-2"><Icons.BarChart3 className="w-4 h-4"/> Brand Sales</h3>
+                        <div className="space-y-4">
+                            {Object.entries(brands).map(([b,c]) => {
+                                const max = Math.max(...Object.values(brands), 1);
+                                return (
+                                    <div key={b}>
+                                        <div className="flex justify-between text-xs font-bold mb-1"><span>{b}</span><span className="text-gray-400">{c}</span></div>
+                                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all duration-1000 bg-[#1A1D1F]" style={{width:`${(c/max)*100}%`}}></div></div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function RegModal({onClose, onReg}) {
+            const [f, setF] = useState({name:'', mobile:'', place:'', pan:''});
+            const appId = 'default-app-id';
+            const sub = async (e) => { e.preventDefault(); await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('painters').add({...f, joinedAt: new Date().toISOString()}); onReg(f.name); };
+            return (
+                <div className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl p-6 w-full max-w-sm">
+                        <div className="flex justify-between mb-4"><h3 className="font-bold text-xl">New Painter</h3><button onClick={onClose}><Icons.X/></button></div>
+                        <form onSubmit={sub} className="space-y-3">
+                            <input className="trantor-input w-full p-3 font-bold" placeholder="Name" value={f.name} onChange={e=>setF({...f, name:e.target.value})} required autoFocus />
+                            <input className="trantor-input w-full p-3 font-bold" placeholder="Mobile" value={f.mobile} onChange={e=>setF({...f, mobile:e.target.value})} required />
+                            <input className="trantor-input w-full p-3 font-bold" placeholder="Place" value={f.place} onChange={e=>setF({...f, place:e.target.value})} required />
+                            <button className="w-full bg-black text-white py-3 rounded-xl font-bold mt-2">Save</button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
