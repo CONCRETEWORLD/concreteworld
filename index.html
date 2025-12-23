@@ -42,7 +42,6 @@
 
         /* QR Scanner Customization */
         #reader { width: 100%; border-radius: 1rem; overflow: hidden; }
-        #reader__scan_region { background: white; }
     </style>
 </head>
 <body>
@@ -152,14 +151,14 @@
             );
         }
 
-        // --- LOGIN PAGE (NEW) ---
+        // --- LOGIN PAGE ---
         function LoginPage({ onSuccess, onBack }) {
             const [pin, setPin] = useState('');
             const [err, setErr] = useState('');
 
             const handleLogin = (e) => {
                 e.preventDefault();
-                // Simple PIN protection for demo. Default is '2025'
+                // Simple PIN protection. Default is '2025'
                 if(pin === '2025' || pin === 'admin') {
                     onSuccess();
                 } else {
@@ -186,7 +185,7 @@
                                 type="password" 
                                 value={pin}
                                 onChange={(e) => {setPin(e.target.value); setErr('');}}
-                                placeholder="Enter PIN (Try 2025)" 
+                                placeholder="Enter PIN" 
                                 className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl p-4 text-center text-2xl font-black tracking-widest focus:outline-none focus:border-[#6C5DD3] transition-colors"
                                 autoFocus
                                 inputMode="numeric"
@@ -432,7 +431,7 @@
             </button>
         );
 
-        // --- SCANNER & WIZARD ---
+        // --- IMPROVED SCANNER (Auto-starts Camera) ---
         function Scanner({tokens, painters, onSeed}) {
             const [view, setView] = useState('idle');
             const [input, setInput] = useState('');
@@ -442,28 +441,37 @@
             const [pSearch, setPSearch] = useState('');
             const [showReg, setShowReg] = useState(false);
             const [showDrop, setShowDrop] = useState(false);
-            const [cameraMode, setCameraMode] = useState(false); // New state for camera
+            const [cameraMode, setCameraMode] = useState(false);
             const areas = ['Aminagad','Sulibhavi','Kamatagi','Hungund','Ilkal','Bagalkot','Other'];
             const appId = 'default-app-id';
 
-            // Camera handling
             useEffect(() => {
-                let scanner = null;
+                let html5QrCode;
                 if(cameraMode) {
-                    scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
-                    scanner.render(onScanSuccess, (err)=>{console.log(err)});
+                    html5QrCode = new Html5Qrcode("reader");
+                    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                    
+                    html5QrCode.start(
+                        { facingMode: "environment" }, 
+                        config,
+                        (decodedText) => {
+                            setInput(decodedText);
+                            setCameraMode(false);
+                            html5QrCode.stop().catch(e=>console.log(e));
+                        },
+                        (errorMessage) => {}
+                    ).catch(err => {
+                        console.error("Error starting camera", err);
+                        alert("Could not start camera. Please ensure you gave permission.");
+                        setCameraMode(false);
+                    });
                 }
                 return () => {
-                    if(scanner) scanner.clear().catch(e=>console.log(e));
-                }
+                    if (html5QrCode) {
+                        html5QrCode.stop().then(() => html5QrCode.clear()).catch(err => console.log("Stop failed", err));
+                    }
+                };
             }, [cameraMode]);
-
-            const onScanSuccess = (decodedText) => {
-                setInput(decodedText);
-                setCameraMode(false);
-                // Auto trigger verify if needed, or just fill input
-                // scan({preventDefault:()=>{}}); 
-            };
 
             const scan = (e) => {
                 e.preventDefault(); setError('');
@@ -491,8 +499,8 @@
                     {/* Camera Modal */}
                     {cameraMode && (
                         <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-4">
-                            <h3 className="text-white font-bold mb-4">Point at QR Code</h3>
-                            <div id="reader" className="bg-white rounded-xl overflow-hidden shadow-2xl w-full max-w-sm"></div>
+                            <h3 className="text-white font-bold mb-4">Scanning...</h3>
+                            <div id="reader" className="bg-black w-full max-w-sm h-80 overflow-hidden rounded-xl border-2 border-[#6C5DD3]"></div>
                             <button onClick={()=>setCameraMode(false)} className="mt-8 bg-white/20 text-white px-8 py-3 rounded-full font-bold backdrop-blur-md">Close Camera</button>
                         </div>
                     )}
